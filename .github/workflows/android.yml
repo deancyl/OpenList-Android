@@ -61,7 +61,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Release APK
+      - name: Configure Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -70,19 +70,27 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > app/release.keystore
-            cat >> gradle.properties << 'EOF'
-            android.storeFile=app/release.keystore
-            android.storePassword=$KEYSTORE_PASSWORD
-            android.keyAlias=$KEY_ALIAS
-            android.keyPassword=$KEY_PASSWORD
-            EOF
+            echo "android.storeFile=app/release.keystore" >> gradle.properties
+            echo "android.storePassword=$KEYSTORE_PASSWORD" >> gradle.properties
+            echo "android.keyAlias=$KEY_ALIAS" >> gradle.properties
+            echo "android.keyPassword=$KEY_PASSWORD" >> gradle.properties
           fi
-          ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Upload Release APK
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Upload Release APK (signed)
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
+          name: release-apk-signed
           path: app/build/outputs/apk/release/*.apk
           retention-days: 30
-        if: env.KEYSTORE_BASE64 != null
+        if: secrets.KEYSTORE_BASE64 != ''
+
+      - name: Upload Release APK (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk-unsigned
+          path: app/build/outputs/apk/release-unsigned/*.apk
+          retention-days: 30
+        if: secrets.KEYSTORE_BASE64 == ''
