@@ -72,12 +72,12 @@ class FileListViewModel @Inject constructor(
                 is Result.Success -> {
                     val data = result.data
                     val sorted = sortFiles(data.content ?: emptyList())
-                    val newHistory = _uiState.value.pathHistory.toMutableList()
-                    val currentIndex = newHistory.indexOf(path)
-                    if (currentIndex >= 0) {
-                        newHistory.removeRange(currentIndex + 1, newHistory.size)
+                    val currentHistory = _uiState.value.pathHistory
+                    val currentIndex = currentHistory.indexOf(path)
+                    val newHistory: List<String> = if (currentIndex >= 0) {
+                        currentHistory.subList(0, currentIndex + 1)
                     } else {
-                        newHistory.add(path)
+                        currentHistory + path
                     }
 
                     _uiState.update {

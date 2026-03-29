@@ -25,6 +25,7 @@ import org.openlist.app.data.model.FileItem
 import org.openlist.app.ui.theme.*
 import org.openlist.app.util.FileUtils
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FileListItem(
     file: FileItem,
@@ -112,6 +113,7 @@ fun FileListItem(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FileGridItem(
     file: FileItem,
@@ -189,7 +191,7 @@ fun FileList(
                 isSelected = selectedFiles.contains(file),
                 onClick = { onFileClick(file) },
                 onLongClick = { onFileLongClick(file) },
-                modifier = Modifier.animateItem()
+                modifier = Modifier
             )
         }
     }
