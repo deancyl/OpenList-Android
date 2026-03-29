@@ -1,7 +1,10 @@
 package org.openlist.app.data.repository
 
+import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import org.openlist.app.data.api.OpenListApi
 import org.openlist.app.data.model.*
+import org.openlist.app.di.ApiClient
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,15 +16,28 @@ sealed class Result<out T> {
 
 @Singleton
 class OpenListRepository @Inject constructor(
-    private val api: OpenListApi,
+    private val okHttpClient: OkHttpClient,
     private val preferencesRepository: PreferencesRepository
 ) {
+
+    // Lazily created API instance using stored server URL
+    private val api: OpenListApi by lazy {
+        val serverUrl = runBlocking { preferencesRepository.getServerUrl() }
+        ApiClient.create(okHttpClient, serverUrl).create(OpenListApi::class.java)
+    }
+
+    // Create API with a specific base URL (used for login before URL is stored)
+    private fun createApi(baseUrl: String): OpenListApi {
+        return ApiClient.create(okHttpClient, baseUrl).create(OpenListApi::class.java)
+    }
 
     // ============ Auth ============
 
     suspend fun login(serverUrl: String, username: String, password: String): Result<LoginResponse> {
         return try {
-            val response = api.login(LoginRequest(username, password))
+            // Use provided URL directly for login (before it's stored)
+            val loginApi = createApi(serverUrl)
+            val response = loginApi.login(LoginRequest(username, password))
             if (response.isSuccessful) {
                 response.body()?.let { body ->
                     if (body.code == 0) {
@@ -103,8 +119,7 @@ class OpenListRepository @Inject constructor(
             if (response.isSuccessful) {
                 response.body()?.let { body ->
                     if (body.code == 0) {
-                        body.data?.let { Result.Success(it) }
-                            ?: Result.Error(message = "No file data")
+                        body.data?.let { Result.Success(it) } ?: Result.Error(message = "No file data")
                     } else {
                         Result.Error(body.code, body.message)
                     }
@@ -190,8 +205,7 @@ class OpenListRepository @Inject constructor(
             if (response.isSuccessful) {
                 response.body()?.let { body ->
                     if (body.code == 0) {
-                        body.data?.let { Result.Success(it) }
-                            ?: Result.Error(message = "No download link")
+                        body.data?.let { Result.Success(it) } ?: Result.Error(message = "No download link")
                     } else {
                         Result.Error(body.code, body.message)
                     }
@@ -212,8 +226,7 @@ class OpenListRepository @Inject constructor(
             if (response.isSuccessful) {
                 response.body()?.let { body ->
                     if (body.code == 0) {
-                        body.data?.let { Result.Success(it) }
-                            ?: Result.Error(message = "No settings data")
+                        body.data?.let { Result.Success(it) } ?: Result.Error(message = "No settings data")
                     } else {
                         Result.Error(body.code, body.message)
                     }

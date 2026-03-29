@@ -33,12 +33,9 @@ object AppModule {
     ): Interceptor = Interceptor { chain ->
         val originalRequest = chain.request()
         val path = originalRequest.url.encodedPath
-
-        // Skip auth for login
         if (path.contains("auth/login")) {
             return@Interceptor chain.proceed(originalRequest)
         }
-
         val token = runBlocking { preferencesRepository.getToken() }
         val newRequest = if (!token.isNullOrEmpty()) {
             originalRequest.newBuilder()
@@ -58,7 +55,6 @@ object AppModule {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
-
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
@@ -70,15 +66,13 @@ object AppModule {
 }
 
 /**
- * Creates Retrofit instances with dynamic base URLs.
- * Base URL is determined by the stored server URL preference.
+ * Creates Retrofit instances with the stored server base URL.
  */
-object ApiFactory {
-
+object ApiClient {
     fun create(okHttpClient: OkHttpClient, baseUrl: String): Retrofit {
-        val fixedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+        val fixed = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
         return Retrofit.Builder()
-            .baseUrl(fixedBaseUrl)
+            .baseUrl(fixed)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
